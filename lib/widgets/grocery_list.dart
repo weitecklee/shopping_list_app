@@ -17,7 +17,6 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
   var _isLoading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -29,9 +28,12 @@ class _GroceryListState extends State<GroceryList> {
     final response = await http.get(kFirebaseUrl);
 
     if (response.statusCode >= 400) {
-      setState(() {
-        _error = 'Failed to fetch data. Please try again later.';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to fetch data. Please try again later.'),
+          duration: Duration(minutes: 1),
+        ),
+      );
       return;
     }
 
@@ -69,6 +71,24 @@ class _GroceryListState extends State<GroceryList> {
     }
   }
 
+  void _removeItem(GroceryItem item) async {
+    final idx = _groceryItems.indexOf(item);
+    setState(() {
+      _groceryItems.remove(item);
+    });
+    final response = await http.delete(deleteUrl(item.id));
+    if (response.statusCode >= 400) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to remove item. Please try again later.'),
+        ),
+      );
+      setState(() {
+        _groceryItems.insert(idx, item);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget body = const Center(
@@ -85,9 +105,7 @@ class _GroceryListState extends State<GroceryList> {
         itemBuilder: (ctx, i) => Dismissible(
           key: ValueKey(_groceryItems[i].id),
           onDismissed: (direction) {
-            setState(() {
-              _groceryItems.remove(_groceryItems[i]);
-            });
+            _removeItem(_groceryItems[i]);
           },
           child: ListTile(
             title: Text(_groceryItems[i].name),
@@ -99,11 +117,6 @@ class _GroceryListState extends State<GroceryList> {
             trailing: Text(_groceryItems[i].quantity.toString()),
           ),
         ),
-      );
-    }
-    if (_error != null) {
-      body = Center(
-        child: Text(_error!),
       );
     }
     return Scaffold(
