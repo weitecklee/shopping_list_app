@@ -17,6 +17,7 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
   var _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -26,6 +27,14 @@ class _GroceryListState extends State<GroceryList> {
 
   void _loadItems() async {
     final response = await http.get(kFirebaseUrl);
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        _error = 'Failed to fetch data. Please try again later.';
+      });
+      return;
+    }
+
     final Map<String, dynamic> listData = json.decode(response.body);
     final List<GroceryItem> loadedItems = [];
     for (final item in listData.entries) {
@@ -62,6 +71,41 @@ class _GroceryListState extends State<GroceryList> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body = const Center(
+      child: Text('No items to display.'),
+    );
+    if (_isLoading) {
+      body = const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    if (_groceryItems.isNotEmpty) {
+      body = ListView.builder(
+        itemCount: _groceryItems.length,
+        itemBuilder: (ctx, i) => Dismissible(
+          key: ValueKey(_groceryItems[i].id),
+          onDismissed: (direction) {
+            setState(() {
+              _groceryItems.remove(_groceryItems[i]);
+            });
+          },
+          child: ListTile(
+            title: Text(_groceryItems[i].name),
+            leading: Container(
+              width: 24,
+              height: 24,
+              color: _groceryItems[i].category.color,
+            ),
+            trailing: Text(_groceryItems[i].quantity.toString()),
+          ),
+        ),
+      );
+    }
+    if (_error != null) {
+      body = Center(
+        child: Text(_error!),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Groceries'),
@@ -72,34 +116,7 @@ class _GroceryListState extends State<GroceryList> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : _groceryItems.isNotEmpty
-              ? ListView.builder(
-                  itemCount: _groceryItems.length,
-                  itemBuilder: (ctx, i) => Dismissible(
-                    key: ValueKey(_groceryItems[i].id),
-                    onDismissed: (direction) {
-                      setState(() {
-                        _groceryItems.remove(_groceryItems[i]);
-                      });
-                    },
-                    child: ListTile(
-                      title: Text(_groceryItems[i].name),
-                      leading: Container(
-                        width: 24,
-                        height: 24,
-                        color: _groceryItems[i].category.color,
-                      ),
-                      trailing: Text(_groceryItems[i].quantity.toString()),
-                    ),
-                  ),
-                )
-              : const Center(
-                  child: Text('No items to display.'),
-                ),
+      body: body,
     );
   }
 }
