@@ -16,6 +16,7 @@ class GroceryList extends StatefulWidget {
 
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
+  var _isLoading = true;
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _GroceryListState extends State<GroceryList> {
     }
     setState(() {
       _groceryItems = loadedItems;
+      _isLoading = false;
     });
   }
 
@@ -70,30 +72,34 @@ class _GroceryListState extends State<GroceryList> {
           ),
         ],
       ),
-      body: _groceryItems.isNotEmpty
-          ? ListView.builder(
-              itemCount: _groceryItems.length,
-              itemBuilder: (ctx, i) => Dismissible(
-                key: ValueKey(_groceryItems[i].id),
-                onDismissed: (direction) {
-                  setState(() {
-                    _groceryItems.remove(_groceryItems[i]);
-                  });
-                },
-                child: ListTile(
-                  title: Text(_groceryItems[i].name),
-                  leading: Container(
-                    width: 24,
-                    height: 24,
-                    color: _groceryItems[i].category.color,
-                  ),
-                  trailing: Text(_groceryItems[i].quantity.toString()),
-                ),
-              ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
             )
-          : const Center(
-              child: Text('No items to display.'),
-            ),
+          : _groceryItems.isNotEmpty
+              ? ListView.builder(
+                  itemCount: _groceryItems.length,
+                  itemBuilder: (ctx, i) => Dismissible(
+                    key: ValueKey(_groceryItems[i].id),
+                    onDismissed: (direction) {
+                      setState(() {
+                        _groceryItems.remove(_groceryItems[i]);
+                      });
+                    },
+                    child: ListTile(
+                      title: Text(_groceryItems[i].name),
+                      leading: Container(
+                        width: 24,
+                        height: 24,
+                        color: _groceryItems[i].category.color,
+                      ),
+                      trailing: Text(_groceryItems[i].quantity.toString()),
+                    ),
+                  ),
+                )
+              : const Center(
+                  child: Text('No items to display.'),
+                ),
     );
   }
 }
