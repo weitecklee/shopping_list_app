@@ -24,31 +24,42 @@ class _NewItemState extends State<NewItem> {
   void _addItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      setState(() {
-        _isSending = true;
-      });
-      final response = await http.post(
-        kFirebaseUrl,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(
-          {
-            'name': _enteredName,
-            'quantity': _enteredQuantity,
-            'category': _selectedCategory.title,
+      try {
+        setState(() {
+          _isSending = true;
+        });
+        final response = await http.post(
+          kFirebaseUrl,
+          headers: {
+            'Content-Type': 'application/json',
           },
-        ),
-      );
-      final Map<String, dynamic> resData = json.decode(response.body);
+          body: json.encode(
+            {
+              'name': _enteredName,
+              'quantity': _enteredQuantity,
+              'category': _selectedCategory.title,
+            },
+          ),
+        );
+        final Map<String, dynamic> resData = json.decode(response.body);
 
-      if (context.mounted) {
-        Navigator.of(context).pop(GroceryItem(
-          id: resData['name'],
-          name: _enteredName,
-          quantity: _enteredQuantity,
-          category: _selectedCategory,
-        ));
+        if (context.mounted) {
+          Navigator.of(context).pop(GroceryItem(
+            id: resData['name'],
+            name: _enteredName,
+            quantity: _enteredQuantity,
+            category: _selectedCategory,
+          ));
+        }
+      } catch (error) {
+        setState(() {
+          _isSending = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Something went wrong. Please try again later.'),
+          ),
+        );
       }
     }
   }

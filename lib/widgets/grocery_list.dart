@@ -25,44 +25,50 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   void _loadItems() async {
-    final response = await http.get(kFirebaseUrl);
+    try {
+      final response = await http.get(kFirebaseUrl);
+      if (response.statusCode >= 400) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to fetch data. Please try again later.'),
+          ),
+        );
+        return;
+      }
 
-    if (response.statusCode >= 400) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to fetch data. Please try again later.'),
-          duration: Duration(minutes: 1),
-        ),
-      );
-      return;
-    }
+      if (response.body == 'null') {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
-    if (response.body == 'null') {
+      final Map<String, dynamic> listData = json.decode(response.body);
+      final List<GroceryItem> loadedItems = [];
+      for (final item in listData.entries) {
+        final category = categories.entries
+            .firstWhere((e) => e.value.title == item.value['category'])
+            .value;
+        loadedItems.add(
+          GroceryItem(
+            id: item.key,
+            name: item.value['name'],
+            quantity: item.value['quantity'],
+            category: category,
+          ),
+        );
+      }
       setState(() {
+        _groceryItems = loadedItems;
         _isLoading = false;
       });
-      return;
-    }
-
-    final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> loadedItems = [];
-    for (final item in listData.entries) {
-      final category = categories.entries
-          .firstWhere((e) => e.value.title == item.value['category'])
-          .value;
-      loadedItems.add(
-        GroceryItem(
-          id: item.key,
-          name: item.value['name'],
-          quantity: item.value['quantity'],
-          category: category,
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again later.'),
         ),
       );
     }
-    setState(() {
-      _groceryItems = loadedItems;
-      _isLoading = false;
-    });
   }
 
   void _addItem() async {
@@ -83,16 +89,25 @@ class _GroceryListState extends State<GroceryList> {
     setState(() {
       _groceryItems.remove(item);
     });
-    final response = await http.delete(deleteUrl(item.id));
-    if (response.statusCode >= 400) {
+    try {
+      final response = await http.delete(deleteUrl(item.id));
+      if (response.statusCode >= 400) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to remove item. Please try again later.'),
+          ),
+        );
+        setState(() {
+          _groceryItems.insert(idx, item);
+        });
+      }
+    } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Failed to remove item. Please try again later.'),
+          content: Text('Something went wrong. Please try again later.'),
+          duration: Duration(minutes: 1),
         ),
       );
-      setState(() {
-        _groceryItems.insert(idx, item);
-      });
     }
   }
 
